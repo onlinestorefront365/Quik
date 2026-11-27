@@ -21,3 +21,12 @@ python examples/demo.py
 - `InMemoryApprovalStore` is for local development only. Use `RedisApprovalStore` (TTL-bound, atomic single-use consumption via Lua) for anything multi-process.
 - `webhooks.build_approval_router` exposes an HMAC-SHA256-signed endpoint for approval decisions. It refuses to start without `APPROVAL_WEBHOOK_SECRET` (or an explicit `webhook_secret`).
 - Copy `.env.example` and set real values.
+
+## Approval semantics
+
+- Approval hash covers tenant, user, tool and exact arguments (not session). The requesting `session_id` is stored on the ticket and enforced atomically when the grant is consumed, so another session cannot claim it.
+- Grants are single-use. Create, decide and consume are each one Lua script on Redis (`RedisApprovalStore`).
+- A rejected ticket keeps blocking the identical payload until the TTL expires; changing any argument creates a new ticket.
+- `allow_self_approval=False` (default) refuses a reviewer who is the requesting user. The reviewer ID comes from the HMAC-authenticated approval app, so this does not protect against a compromised approval service.
+- Scripts need single-node Redis or Sentinel (not Cluster without shared hash tags).
+- Tests run on `fakeredis[lua]`; set `REDIS_URL` to run the same suite against a real Redis.

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pytest
@@ -22,55 +21,7 @@ from agent_tool_middleware import (
     verify_order_ownership,
 )
 from agent_tool_middleware.redis_approvals import RedisApprovalStore
-
-
-class FakeAsyncRedis:
-    def __init__(self) -> None:
-        self._kv: dict[str, str] = {}
-
-    async def get(self, key: str) -> str | None:
-        return self._kv.get(key)
-
-    async def set(self, key: str, value: str, ex: int | None = None) -> None:
-        self._kv[key] = value
-
-    async def ttl(self, key: str) -> int:
-        return 600 if key in self._kv else -2
-
-    def pipeline(self, transaction: bool = True) -> "FakePipeline":
-        return FakePipeline(self)
-
-    def register_script(self, lua_source: str) -> Any:
-        async def _run(keys: list[str]) -> int:
-            ticket_id = self._kv.get(keys[0])
-            if not ticket_id:
-                return 0
-            ticket_key = f"approval:ticket:{ticket_id}"
-            raw = self._kv.get(ticket_key)
-            if not raw:
-                return 0
-            data = json.loads(raw)
-            if data.get("status") != "approved":
-                return 0
-            data["status"] = "consumed"
-            self._kv[ticket_key] = json.dumps(data)
-            del self._kv[keys[0]]
-            return 1
-
-        return _run
-
-
-class FakePipeline:
-    def __init__(self, store: FakeAsyncRedis) -> None:
-        self._store = store
-        self._ops: list[tuple[str, str]] = []
-
-    def set(self, key: str, value: str, ex: int | None = None) -> None:
-        self._ops.append((key, value))
-
-    async def execute(self) -> None:
-        for k, v in self._ops:
-            self._store._kv[k] = v
+from conftest import new_redis
 
 
 class RefundArgs(BaseModel):
@@ -119,7 +70,7 @@ def security_harness():
         "support_agent": {"billing:refund:read", "billing:refund:write"},
         "support_lead": {"billing:refund:read", "billing:refund:write"},
     })
-    redis_client = FakeAsyncRedis()
+    redis_client = new_redis()
     approval_store = RedisApprovalStore(redis_client, ttl_seconds=900)
     db = MockOrdersDB()
 

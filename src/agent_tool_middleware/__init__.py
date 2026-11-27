@@ -1,5 +1,12 @@
 from .abac import ABACOwnershipMiddleware, AsyncDB, OwnershipGuardFn, verify_order_ownership
-from .approvals import ApprovalStoreProtocol, ApprovalTicket, InMemoryApprovalStore
+from .approvals import (
+    ApprovalState,
+    ApprovalStoreProtocol,
+    ApprovalTicket,
+    InMemoryApprovalStore,
+    SelfApprovalError,
+    TicketAlreadyDecidedError,
+)
 from .dispatcher import ToolDispatcher
 from .middleware import (
     AuditAndBudgetMiddleware,
@@ -20,6 +27,7 @@ from .registry import DynamicRiskFn, ToolHandler, ToolRegistry, ToolSpec
 
 __all__ = [
     "ABACOwnershipMiddleware",
+    "ApprovalState",
     "ApprovalStoreProtocol",
     "ApprovalTicket",
     "AsyncDB",
@@ -34,6 +42,8 @@ __all__ = [
     "RiskGateMiddleware",
     "RiskTier",
     "SchemaValidationMiddleware",
+    "SelfApprovalError",
+    "TicketAlreadyDecidedError",
     "ToolCallEnvelope",
     "ToolDispatcher",
     "ToolExecutionResult",

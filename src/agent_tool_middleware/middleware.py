@@ -164,17 +164,29 @@ class RiskGateMiddleware:
             payload_hash = self._approval_store.compute_hash(
                 ctx, spec.name, envelope.parsed_args
             )
-            if not await self._approval_store.consume_if_approved(payload_hash):
-                ticket_id = await self._approval_store.create_or_get_pending(
+            if not await self._approval_store.consume_if_approved(ctx, payload_hash):
+                state = await self._approval_store.create_or_get_pending(
                     ctx, spec.name, payload_hash
+                )
+                if state.status == "pending":
+                    return ToolExecutionResult(
+                        call_id=envelope.call_id,
+                        status=DecisionStatus.PENDING_APPROVAL,
+                        approval_ticket_id=state.ticket_id,
+                        error=(
+                            f"Action requires human approval (ticket={state.ticket_id}, "
+                            f"risk={effective_risk.name}). Pause execution until approved."
+                        ),
+                    )
+                reason = (
+                    "rejected by a reviewer"
+                    if state.status == "rejected"
+                    else "approved for a different session"
                 )
                 return ToolExecutionResult(
                     call_id=envelope.call_id,
-                    status=DecisionStatus.PENDING_APPROVAL,
-                    approval_ticket_id=ticket_id,
-                    error=(
-                        f"Action requires human approval (ticket={ticket_id}, "
-                        f"risk={effective_risk.name}). Pause execution until approved."
-                    ),
+                    status=DecisionStatus.DENIED,
+                    approval_ticket_id=state.ticket_id,
+                    error=f"Action denied: approval ticket {state.ticket_id} was {reason}.",
                 )
         return await call_next(envelope, ctx)
