@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-tool-middleware"
+version = "0.1.0"
+description = "Security middleware for LLM agent tool calls: schema validation, RBAC, ABAC ownership, risk-gated human approval, audit and budgets."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["pydantic>=2.5"]
+
+[project.optional-dependencies]
+web = ["fastapi>=0.110", "redis>=5.0"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "fastapi>=0.110",
+    "redis>=5.0",
+    "httpx>=0.27",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
